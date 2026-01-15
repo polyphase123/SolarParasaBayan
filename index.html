@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Para Sa Bayan Franchise Viewer (RA 11357)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #map { height: 100%; width: 100%; min-height: 500px; z-index: 1; }
+        .leaflet-popup-content-wrapper { border-radius: 0.5rem; font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col lg:flex-row overflow-hidden">
+
+    <!-- Sidebar / Info Panel -->
+    <div class="w-full lg:w-1/3 flex flex-col h-full bg-white shadow-xl z-20 relative">
+        <!-- Header -->
+        <div class="p-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-md">
+            <div class="flex items-center gap-3 mb-2">
+                <i data-lucide="sun" class="w-8 h-8"></i>
+                <h1 class="text-2xl font-bold tracking-tight">Solar Para Sa Bayan</h1>
+            </div>
+            <p class="text-yellow-50 text-sm font-medium opacity-90">Republic Act No. 11357</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200">
+            <button onclick="switchTab('coverage')" id="tab-coverage" class="flex-1 py-3 text-sm font-semibold text-orange-600 border-b-2 border-orange-600 hover:bg-orange-50 transition">Coverage Map</button>
+            <button onclick="switchTab('provisions')" id="tab-provisions" class="flex-1 py-3 text-sm font-semibold text-slate-500 hover:text-orange-600 hover:bg-orange-50 transition">Key Provisions</button>
+            <button onclick="switchTab('definitions')" id="tab-definitions" class="flex-1 py-3 text-sm font-semibold text-slate-500 hover:text-orange-600 hover:bg-orange-50 transition">Definitions</button>
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto relative bg-slate-50">
+            
+            <!-- Tab: Coverage List -->
+            <div id="content-coverage" class="p-4 space-y-4">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-400"></i>
+                    <input type="text" id="locationSearch" placeholder="Search province or municipality..." 
+                           class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:outline-none text-sm shadow-sm">
+                </div>
+                
+                <div class="space-y-2" id="locationsList">
+                    <!-- Dynamic Content Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Key Provisions -->
+            <div id="content-provisions" class="hidden p-6 space-y-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-orange-500"></i> Nature & Scope
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Grant to construct, install, establish, operate, and maintain Distributed Energy Resources (DERs) and microgrids utilizing renewable energy technology to provide power in remote, unviable, unserved, or underserved areas.
+                    </p>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-green-500"></i> Consumer Protection
+                    </h3>
+                    <ul class="text-sm text-slate-600 space-y-2 list-disc pl-4">
+                        <li>Retail rates must be the "true cost" and approved by ERC (Sec. 8).</li>
+                        <li>No government subsidy for rates (Sec. 8).</li>
+                        <li>Must establish a consumer desk for complaints (Sec. 7).</li>
+                        <li>Lifeline rates for marginalized end users (Sec. 8).</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <i data-lucide="users" class="w-5 h-5 text-blue-500"></i> Responsibilities
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Operate in the least-cost manner. Provide efficient and reliable service. Create employment opportunities, prioritizing residents of the franchise area (Sec. 17).
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tab: Definitions -->
+            <div id="content-definitions" class="hidden p-6 space-y-4">
+                <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                    <h4 class="font-bold text-blue-900 text-sm mb-1">Microgrid</h4>
+                    <p class="text-xs text-blue-800">A group of interconnected loads and distributed energy resources within clearly defined electrical boundaries that acts as a single controllable entity with respect to the grid.</p>
+                </div>
+                
+                <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
+                    <h4 class="font-bold text-orange-900 text-sm mb-1">Unserved Area</h4>
+                    <p class="text-xs text-orange-800">An area with no electricity access, no distribution system lines, no solar PV home systems, or no connection to any microgrid.</p>
+                </div>
+
+                <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                    <h4 class="font-bold text-yellow-900 text-sm mb-1">Underserved Area</h4>
+                    <p class="text-xs text-yellow-800">Areas where service is less than 24 hours daily, non-compliant with Distribution Code, or frequent interruptions (12+ times in 12 months).</p>
+                </div>
+
+                <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                    <h4 class="font-bold text-green-900 text-sm mb-1">Distributed Energy Resources (DERs)</h4>
+                    <p class="text-xs text-green-800">Smaller power sources, demand-side or supply-side, aggregated to meet regular demand (e.g., renewable facilities, energy storage, EV charging).</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-3 bg-slate-100 text-center text-xs text-slate-400 border-t border-slate-200">
+            Based on Republic Act No. 11357 | Generated by Gemini
+        </div>
+    </div>
+
+    <!-- Map Area -->
+    <div class="flex-1 relative h-1/2 lg:h-full">
+        <div id="map"></div>
+        
+        <!-- Floating Legend for Desktop -->
+        <div class="absolute bottom-6 left-6 z-[1000] hidden lg:block">
+            <div class="glass-panel p-4 rounded-lg shadow-lg max-w-xs">
+                <h4 class="text-sm font-bold mb-2">Map Legend</h4>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                    <span class="text-xs text-slate-600">Covered Province</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                    <span class="text-xs text-slate-600">Specific Municipality</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // --- DATA: Locations from RA 11357 Section 1 ---
+        // Coordinates are approximate centers for visualization
+        const coverageData = [
+            // PROVINCES
+            { name: "Aklan", type: "Province", lat: 11.6969, lng: 122.3598, desc: "Entire Province" },
+            { name: "Aurora", type: "Province", lat: 16.3263, lng: 121.7850, desc: "Entire Province" },
+            { name: "Bohol", type: "Province", lat: 9.8500, lng: 124.1435, desc: "Entire Province" },
+            { name: "Cagayan", type: "Province", lat: 18.2323, lng: 121.8480, desc: "Entire Province" },
+            { name: "Camiguin", type: "Province", lat: 9.1732, lng: 124.7299, desc: "Entire Province" },
+            { name: "Capiz", type: "Province", lat: 11.3976, lng: 122.6123, desc: "Entire Province" },
+            { name: "Compostela Valley (Davao de Oro)", type: "Province", lat: 7.6030, lng: 125.9616, desc: "Entire Province" },
+            { name: "Davao Oriental", type: "Province", lat: 7.1525, lng: 126.3768, desc: "Entire Province" },
+            { name: "Guimaras", type: "Province", lat: 10.5750, lng: 122.5833, desc: "Entire Province" },
+            { name: "Isabela", type: "Province", lat: 17.0601, lng: 121.9673, desc: "Entire Province" },
+            { name: "Masbate", type: "Province", lat: 12.3688, lng: 123.6198, desc: "Entire Province" },
+            { name: "Misamis Occidental", type: "Province", lat: 8.3619, lng: 123.7667, desc: "Entire Province" },
+            { name: "Occidental Mindoro", type: "Province", lat: 13.1118, lng: 120.8418, desc: "Entire Province" },
+            { name: "Oriental Mindoro", type: "Province", lat: 12.8797, lng: 121.2185, desc: "Entire Province" },
+            { name: "Palawan", type: "Province", lat: 9.8349, lng: 118.7384, desc: "Entire Province" },
+            { name: "Tawi-Tawi", type: "Province", lat: 5.1278, lng: 119.9272, desc: "Entire Province" },
+
+            // BATANGAS MUNICIPALITIES
+            { name: "Agoncillo", type: "Municipality", parent: "Batangas", lat: 13.9317, lng: 120.9322 },
+            { name: "Alitagtag", type: "Municipality", parent: "Batangas", lat: 13.8643, lng: 121.0022 },
+            { name: "Balayan", type: "Municipality", parent: "Batangas", lat: 13.9400, lng: 120.7297 },
+            { name: "Balete", type: "Municipality", parent: "Batangas", lat: 14.0200, lng: 121.0969 },
+            { name: "Bauan", type: "Municipality", parent: "Batangas", lat: 13.7936, lng: 121.0069 },
+            { name: "Calaca", type: "Municipality", parent: "Batangas", lat: 13.9344, lng: 120.8122 },
+            { name: "Calatagan", type: "Municipality", parent: "Batangas", lat: 13.8317, lng: 120.6319 },
+            { name: "Cuenca", type: "Municipality", parent: "Batangas", lat: 13.9069, lng: 121.0456 },
+            { name: "Ibaan", type: "Municipality", parent: "Batangas", lat: 13.8206, lng: 121.1328 },
+            { name: "Laurel", type: "Municipality", parent: "Batangas", lat: 14.0500, lng: 120.9167 },
+            { name: "Lemery", type: "Municipality", parent: "Batangas", lat: 13.9167, lng: 120.9167 },
+            { name: "Lian", type: "Municipality", parent: "Batangas", lat: 14.0333, lng: 120.6500 },
+            { name: "Lipa", type: "City", parent: "Batangas", lat: 13.9419, lng: 121.1644 },
+            { name: "Lobo", type: "Municipality", parent: "Batangas", lat: 13.6500, lng: 121.2167 },
+            { name: "Mabini", type: "Municipality", parent: "Batangas", lat: 13.7500, lng: 120.9333 },
+            { name: "Malvar", type: "Municipality", parent: "Batangas", lat: 14.0436, lng: 121.1578 },
+            { name: "Mataas na Kahoy", type: "Municipality", parent: "Batangas", lat: 13.9667, lng: 121.1167 },
+            { name: "Nasugbu", type: "Municipality", parent: "Batangas", lat: 14.0667, lng: 120.6333 },
+            { name: "Padre Garcia", type: "Municipality", parent: "Batangas", lat: 13.8833, lng: 121.2167 },
+            { name: "Rosario", type: "Municipality", parent: "Batangas", lat: 13.8458, lng: 121.2058 },
+            { name: "San Jose", type: "Municipality", parent: "Batangas", lat: 13.8767, lng: 121.1072 },
+            { name: "San Juan", type: "Municipality", parent: "Batangas", lat: 13.8333, lng: 121.4000 },
+            { name: "San Luis", type: "Municipality", parent: "Batangas", lat: 13.8583, lng: 120.9167 },
+            { name: "San Nicolas", type: "Municipality", parent: "Batangas", lat: 13.9333, lng: 120.9500 },
+            { name: "Santa Teresita", type: "Municipality", parent: "Batangas", lat: 13.8667, lng: 120.9667 },
+            { name: "Taal", type: "Municipality", parent: "Batangas", lat: 13.8833, lng: 120.9167 },
+            { name: "Talisay", type: "Municipality", parent: "Batangas", lat: 14.0933, lng: 121.0200 },
+            { name: "Tanauan", type: "City", parent: "Batangas", lat: 14.0833, lng: 121.1500 },
+            { name: "Taysan", type: "Municipality", parent: "Batangas", lat: 13.8000, lng: 121.2000 },
+            { name: "Tingloy", type: "Municipality", parent: "Batangas", lat: 13.6667, lng: 120.8667 },
+            { name: "Tuy", type: "Municipality", parent: "Batangas", lat: 14.0167, lng: 120.7333 },
+
+            // QUEZON MUNICIPALITIES
+            { name: "Agdangan", type: "Municipality", parent: "Quezon", lat: 13.8750, lng: 121.9167 },
+            { name: "Alabat", type: "Municipality", parent: "Quezon", lat: 14.1000, lng: 122.0167 },
+            { name: "Atimonan", type: "Municipality", parent: "Quezon", lat: 14.0000, lng: 121.9167 },
+            { name: "Buenavista", type: "Municipality", parent: "Quezon", lat: 13.7333, lng: 122.4500 },
+            { name: "Burdeos", type: "Municipality", parent: "Quezon", lat: 14.8500, lng: 121.9667 },
+            { name: "Calauag", type: "Municipality", parent: "Quezon", lat: 13.9583, lng: 122.2875 },
+            { name: "Catanauan", type: "Municipality", parent: "Quezon", lat: 13.6000, lng: 122.3167 },
+            { name: "General Luna", type: "Municipality", parent: "Quezon", lat: 13.6833, lng: 122.1667 },
+            { name: "General Nakar", type: "Municipality", parent: "Quezon", lat: 14.7667, lng: 121.6333 },
+            { name: "Guinayangan", type: "Municipality", parent: "Quezon", lat: 13.9000, lng: 122.4500 },
+            { name: "Gumaca", type: "Municipality", parent: "Quezon", lat: 13.9167, lng: 122.1000 },
+            { name: "Infanta", type: "Municipality", parent: "Quezon", lat: 14.7500, lng: 121.6500 },
+            { name: "Jomalig", type: "Municipality", parent: "Quezon", lat: 14.7000, lng: 122.3667 },
+            { name: "Lopez", type: "Municipality", parent: "Quezon", lat: 13.8833, lng: 122.2500 },
+            { name: "Macalelon", type: "Municipality", parent: "Quezon", lat: 13.7500, lng: 122.1333 },
+            { name: "Mulanay", type: "Municipality", parent: "Quezon", lat: 13.5167, lng: 122.4000 },
+            { name: "Padre Burgos", type: "Municipality", parent: "Quezon", lat: 13.9333, lng: 121.8167 },
+            { name: "Panukulan", type: "Municipality", parent: "Quezon", lat: 14.9333, lng: 121.8167 },
+            { name: "Patnanungan", type: "Municipality", parent: "Quezon", lat: 14.8000, lng: 122.1833 },
+            { name: "Perez", type: "Municipality", parent: "Quezon", lat: 14.2000, lng: 121.9333 },
+            { name: "Pitogo", type: "Municipality", parent: "Quezon", lat: 13.7833, lng: 122.0833 },
+            { name: "Plaridel", type: "Municipality", parent: "Quezon", lat: 13.9500, lng: 122.0167 },
+            { name: "Polilio", type: "Municipality", parent: "Quezon", lat: 14.7167, lng: 121.9167 },
+            { name: "Quezon", type: "Municipality", parent: "Quezon", lat: 14.0000, lng: 122.1833 },
+            { name: "Real", type: "Municipality", parent: "Quezon", lat: 14.6667, lng: 121.6000 },
+            { name: "San Andres", type: "Municipality", parent: "Quezon", lat: 13.3167, lng: 122.6833 },
+            { name: "San Francisco", type: "Municipality", parent: "Quezon", lat: 13.3500, lng: 122.5167 },
+            { name: "San Narciso", type: "Municipality", parent: "Quezon", lat: 13.5667, lng: 122.5667 },
+            { name: "Tagkawayan", type: "Municipality", parent: "Quezon", lat: 13.9667, lng: 122.5333 },
+            { name: "Unisan", type: "Municipality", parent: "Quezon", lat: 13.8333, lng: 121.9833 }
+        ];
+
+        // --- MAP INITIALIZATION ---
+        const map = L.map('map').setView([12.8797, 121.7740], 6); // Center on Philippines
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        const markers = [];
+        
+        // Define Custom Icons
+        const provinceIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: "<div style='background-color: #ea580c; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);'></div>",
+            iconSize: [15, 15],
+            iconAnchor: [7, 7]
+        });
+
+        const townIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: "<div style='background-color: #3b82f6; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>",
+            iconSize: [10, 10],
+            iconAnchor: [5, 5]
+        });
+
+        function populateList(filterText = "") {
+            const listContainer = document.getElementById('locationsList');
+            listContainer.innerHTML = '';
+            
+            // Clear existing markers
+            markers.forEach(m => map.removeLayer(m));
+            markers.length = 0;
+
+            const filteredData = coverageData.filter(loc => 
+                loc.name.toLowerCase().includes(filterText.toLowerCase()) || 
+                (loc.parent && loc.parent.toLowerCase().includes(filterText.toLowerCase()))
+            );
+
+            if(filteredData.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center p-8 text-slate-400">
+                        <i data-lucide="map-pin-off" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm">No locations found.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            filteredData.forEach(loc => {
+                // Add to List
+                const item = document.createElement('div');
+                const isProvince = loc.type === "Province";
+                item.className = "flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-white hover:bg-slate-50 cursor-pointer transition group";
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center ${isProvince ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}">
+                            <i data-lucide="${isProvince ? 'map' : 'map-pin'}" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold text-slate-800 text-sm">${loc.name}</h5>
+                            <p class="text-xs text-slate-500">${loc.parent ? loc.parent + ' • ' : ''} ${loc.type}</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition"></i>
+                `;
+                
+                // Click List Item -> Fly to Map
+                item.onclick = () => {
+                    map.flyTo([loc.lat, loc.lng], isProvince ? 9 : 12, { duration: 1.5 });
+                    // Open popup of corresponding marker (need to track index/ref)
+                    // Simplified: We'll just fly there for now.
+                };
+
+                listContainer.appendChild(item);
+
+                // Add to Map
+                const marker = L.marker([loc.lat, loc.lng], { icon: isProvince ? provinceIcon : townIcon })
+                    .bindPopup(`
+                        <div class="font-sans">
+                            <h3 class="font-bold text-slate-800 text-sm">${loc.name}</h3>
+                            <p class="text-xs text-slate-500">${loc.type}</p>
+                            <div class="mt-2 text-xs bg-slate-100 p-2 rounded">
+                                <span class="font-semibold text-orange-600">Coverage Status:</span> 
+                                RA 11357 Franchise Area
+                            </div>
+                        </div>
+                    `)
+                    .addTo(map);
+                
+                markers.push(marker);
+            });
+            
+            lucide.createIcons();
+        }
+
+        // --- TAB LOGIC ---
+        function switchTab(tabId) {
+            // Hide all content
+            ['coverage', 'provisions', 'definitions'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('text-orange-600', 'border-b-2', 'border-orange-600', 'bg-orange-50');
+                document.getElementById(`tab-${t}`).classList.add('text-slate-500');
+            });
+
+            // Show active content
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            
+            // Style active tab
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            activeTab.classList.remove('text-slate-500');
+            activeTab.classList.add('text-orange-600', 'border-b-2', 'border-orange-600');
+        }
+
+        // --- SEARCH LOGIC ---
+        document.getElementById('locationSearch').addEventListener('input', (e) => {
+            populateList(e.target.value);
+        });
+
+        // --- INIT ---
+        populateList();
+        
+    </script>
+</body>
+</html>
